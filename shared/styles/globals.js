@@ -72,14 +72,19 @@ export default createGlobalStyle`
   dl,
   ol,
   ul,
-  pre,
+  pre {
+    margin-top: 1em;
+    margin-bottom: 1em;
+  }
+  
   blockquote {
     padding-left: 10px;
     font-style: italic;
     border-left: 3px solid rgb(218, 225, 233);
     margin: 10px 0 0 0;
     font-size: 1.3em
-  }
+    }
+
 
   hr {
     border: 0;
