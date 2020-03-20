@@ -27,7 +27,7 @@ function Home(props: Props) {
         <Hero id="signin">
           <AuthNotices notice={props.notice} />
           {process.env.TEAM_LOGO && <Logo src={process.env.TEAM_LOGO} />}
-          <h1>Our team’s knowledge base</h1>
+          <h1>weKnow knowledge base</h1>
           <HeroText>
             Team wiki, documentation, meeting notes, playbooks, onboarding, work
             logs, brainstorming, & more…
