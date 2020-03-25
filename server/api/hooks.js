@@ -137,7 +137,7 @@ router.post('hooks.slack', async ctx => {
 
   ctx.body = {
     response_type: 'ephemeral',
-    text: user_id,
+    text: team.id,
   };
   return;
 
