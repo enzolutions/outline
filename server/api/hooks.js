@@ -135,12 +135,6 @@ router.post('hooks.slack', async ctx => {
     return;
   }
 
-  ctx.body = {
-    response_type: 'ephemeral',
-    text: team.id,
-  };
-  return;
-
   const user = await User.findOne({
     where: {
       teamId: team.id,
@@ -152,13 +146,6 @@ router.post('hooks.slack', async ctx => {
   const options = {
     limit: 5,
   };
-
-  ctx.body = {
-    response_type: 'ephemeral',
-    text: user,
-  };
-  return;
-
   const results = user
     ? await Document.searchForUser(user, text, options)
     : await Document.searchForTeam(team, text, options);
