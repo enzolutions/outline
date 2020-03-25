@@ -135,6 +135,12 @@ router.post('hooks.slack', async ctx => {
     return;
   }
 
+  ctx.body = {
+    response_type: 'ephemeral',
+    text: user_id,
+  };
+  return;
+
   const user = await User.findOne({
     where: {
       teamId: team.id,
