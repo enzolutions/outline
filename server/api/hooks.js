@@ -135,13 +135,7 @@ router.post('hooks.slack', async ctx => {
     return;
   }
 
-  const user = await User.findOne({
-    where: {
-      teamId: team.id,
-      service: 'slack',
-      serviceId: user_id,
-    },
-  });
+  const user = ctx.state.user;
 
   const options = {
     limit: 5,
