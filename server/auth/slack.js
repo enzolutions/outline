@@ -3,7 +3,7 @@ import Sequelize from 'sequelize';
 import Router from 'koa-router';
 import auth from '../middlewares/authentication';
 import addHours from 'date-fns/add_hours';
-import { getCookieDomain } from '../../shared/utils/domains';
+import { stripSubdomain } from '../../shared/utils/domains';
 import { slackAuth } from '../../shared/utils/routeHelpers';
 import {
   Authentication,
@@ -27,7 +27,7 @@ router.get('slack', async ctx => {
   ctx.cookies.set('state', state, {
     httpOnly: false,
     expires: addHours(new Date(), 1),
-    domain: getCookieDomain(ctx.request.hostname),
+    domain: stripSubdomain(ctx.request.hostname),
   });
   ctx.redirect(slackAuth(state));
 });

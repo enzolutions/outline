@@ -6,7 +6,7 @@ import validation from '../middlewares/validation';
 import auth from '../middlewares/authentication';
 import addMonths from 'date-fns/add_months';
 import { Team } from '../models';
-import { getCookieDomain } from '../../shared/utils/domains';
+import { stripSubdomain } from '../../shared/utils/domains';
 
 import slack from './slack';
 import google from './google';
@@ -25,7 +25,7 @@ router.get('/redirect', auth(), async ctx => {
   // transfer access token cookie from root to subdomain
   ctx.cookies.set('accessToken', undefined, {
     httpOnly: true,
-    domain: getCookieDomain(ctx.request.hostname),
+    domain: stripSubdomain(ctx.request.hostname),
   });
 
   ctx.cookies.set('accessToken', user.getJwtToken(), {
