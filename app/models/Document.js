@@ -1,10 +1,8 @@
 // @flow
 import { action, set, observable, computed } from 'mobx';
-import pkg from 'rich-markdown-editor/package.json';
 import addDays from 'date-fns/add_days';
 import invariant from 'invariant';
 import { client } from 'utils/ApiClient';
-import getHeadingsForText from 'shared/utils/getHeadingsForText';
 import parseTitle from 'shared/utils/parseTitle';
 import unescape from 'shared/utils/unescape';
 import BaseModel from 'models/BaseModel';
@@ -44,11 +42,6 @@ export default class Document extends BaseModel {
   get emoji() {
     const { emoji } = parseTitle(this.title);
     return emoji;
-  }
-
-  @computed
-  get headings() {
-    return getHeadingsForText(this.text);
   }
 
   @computed
@@ -180,7 +173,6 @@ export default class Document extends BaseModel {
     try {
       if (isCreating) {
         return await this.store.create({
-          editorVersion: pkg.version,
           parentDocumentId: this.parentDocumentId,
           collectionId: this.collectionId,
           title: this.title,
@@ -194,7 +186,6 @@ export default class Document extends BaseModel {
         title: this.title,
         text: this.text,
         lastRevision: this.revision,
-        editorVersion: pkg.version,
         ...options,
       });
     } finally {
