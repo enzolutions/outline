@@ -10,7 +10,7 @@ import { uploadFile } from "utils/uploadFile";
 import isInternalUrl from "utils/isInternalUrl";
 import Tooltip from "components/Tooltip";
 import UiStore from "stores/UiStore";
-import embeds from "../../embeds";
+import embeds from "../embeds";
 
 const EMPTY_ARRAY = [];
 
@@ -110,7 +110,6 @@ const EditorTooltip = ({ children, ...props }) => (
 
 const EditorWithRouterAndTheme = withRouter(withTheme(Editor));
 
-// $FlowIssue - https://github.com/facebook/flow/issues/6103
 export default React.forwardRef((props, ref) => (
   <EditorWithRouterAndTheme {...props} forwardedRef={ref} />
 ));
