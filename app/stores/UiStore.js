@@ -32,16 +32,18 @@ class UiStore {
     }
 
     // system theme listeners
-    const colorSchemeQueryList = window.matchMedia(
-      "(prefers-color-scheme: dark)"
-    );
+    if (window.matchMedia) {
+      const colorSchemeQueryList = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      );
 
-    const setSystemTheme = (event) => {
-      this.systemTheme = event.matches ? "dark" : "light";
-    };
-    setSystemTheme(colorSchemeQueryList);
-    if (colorSchemeQueryList.addListener) {
-      colorSchemeQueryList.addListener(setSystemTheme);
+      const setSystemTheme = (event) => {
+        this.systemTheme = event.matches ? "dark" : "light";
+      };
+      setSystemTheme(colorSchemeQueryList);
+      if (colorSchemeQueryList.addListener) {
+        colorSchemeQueryList.addListener(setSystemTheme);
+      }
     }
 
     // persisted keys
@@ -107,34 +109,34 @@ class UiStore {
   };
 
   @action
-  enableEditMode() {
+  enableEditMode = () => {
     this.editMode = true;
-  }
+  };
 
   @action
-  disableEditMode() {
+  disableEditMode = () => {
     this.editMode = false;
-  }
+  };
 
   @action
-  enableProgressBar() {
+  enableProgressBar = () => {
     this.progressBarVisible = true;
-  }
+  };
 
   @action
-  disableProgressBar() {
+  disableProgressBar = () => {
     this.progressBarVisible = false;
-  }
+  };
 
   @action
-  toggleMobileSidebar() {
+  toggleMobileSidebar = () => {
     this.mobileSidebarVisible = !this.mobileSidebarVisible;
-  }
+  };
 
   @action
-  hideMobileSidebar() {
+  hideMobileSidebar = () => {
     this.mobileSidebarVisible = false;
-  }
+  };
 
   @action
   showToast = (
