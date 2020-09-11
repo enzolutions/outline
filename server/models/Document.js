@@ -1,10 +1,9 @@
 // @flow
 import removeMarkdown from "@tommoor/remove-markdown";
-import { map, find, compact, uniq } from "lodash";
+import { compact, find, map, uniq } from "lodash";
 import randomstring from "randomstring";
-import Sequelize, { type Transaction } from "sequelize";
+import Sequelize, { Transaction } from "sequelize";
 import MarkdownSerializer from "slate-md-serializer";
-
 import isUUID from "validator/lib/isUUID";
 import parseTitle from "../../shared/utils/parseTitle";
 import unescape from "../../shared/utils/unescape";
@@ -19,15 +18,14 @@ const serializer = new MarkdownSerializer();
 
 export const DOCUMENT_VERSION = 2;
 
-const createRevision = (doc, options = {}) => {
+const createRevision = async (doc, options = {}) => {
   // we don't create revisions for autosaves
   if (options.autosave) return;
 
+  const previous = await Revision.findLatest(doc.id);
+
   // we don't create revisions if identical to previous
-  if (
-    doc.text === doc.previous("text") &&
-    doc.title === doc.previous("title")
-  ) {
+  if (previous && doc.text === previous.text && doc.title === previous.title) {
     return;
   }
 
@@ -556,6 +554,18 @@ Document.prototype.publish = async function (options) {
   return this;
 };
 
+Document.prototype.unpublish = async function (options) {
+  if (!this.publishedAt) return this;
+
+  const collection = await this.getCollection();
+  await collection.removeDocumentInStructure(this);
+
+  this.publishedAt = null;
+  await this.save(options);
+
+  return this;
+};
+
 // Moves a document from being visible to the team within a collection
 // to the archived area, where it can be subsequently restored.
 Document.prototype.archive = async function (userId) {
@@ -570,7 +580,7 @@ Document.prototype.archive = async function (userId) {
 };
 
 // Restore an archived document back to being visible to the team
-Document.prototype.unarchive = async function (userId) {
+Document.prototype.unarchive = async function (userId: string) {
   const collection = await this.getCollection();
 
   // check to see if the documents parent hasn't been archived also
@@ -602,23 +612,27 @@ Document.prototype.unarchive = async function (userId) {
 };
 
 // Delete a document, archived or otherwise.
-Document.prototype.delete = function (options) {
-  return sequelize.transaction(async (transaction: Transaction): Promise<*> => {
-    if (!this.archivedAt) {
-      // delete any children and remove from the document structure
-      const collection = await this.getCollection();
-      if (collection) await collection.deleteDocument(this, { transaction });
+Document.prototype.delete = function (userId: string) {
+  return sequelize.transaction(
+    async (transaction: Transaction): Promise<Document> => {
+      if (!this.archivedAt && !this.template) {
+        // delete any children and remove from the document structure
+        const collection = await this.getCollection();
+        if (collection) await collection.deleteDocument(this, { transaction });
+      }
+
+      await Revision.destroy({
+        where: { documentId: this.id },
+        transaction,
+      });
+
+      this.lastModifiedById = userId;
+      this.deletedAt = new Date();
+
+      await this.save({ transaction });
+      return this;
     }
-
-    await Revision.destroy({
-      where: { documentId: this.id },
-      transaction,
-    });
-
-    await this.destroy({ transaction, ...options });
-
-    return this;
-  });
+  );
 };
 
 Document.prototype.getTimestamp = function () {
