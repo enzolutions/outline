@@ -1,15 +1,6 @@
 // @flow
 import invariant from "invariant";
-import {
-  without,
-  map,
-  find,
-  orderBy,
-  filter,
-  compact,
-  omitBy,
-  uniq,
-} from "lodash";
+import { find, orderBy, filter, compact, omitBy } from "lodash";
 import { observable, action, computed, runInAction } from "mobx";
 import naturalSort from "shared/utils/naturalSort";
 import BaseStore from "stores/BaseStore";
@@ -18,11 +9,21 @@ import Document from "models/Document";
 import type { FetchOptions, PaginationParams, SearchResult } from "types";
 import { client } from "utils/ApiClient";
 
+type ImportOptions = {
+  publish?: boolean,
+};
+
 export default class DocumentsStore extends BaseStore<Document> {
-  @observable recentlyViewedIds: string[] = [];
   @observable searchCache: Map<string, SearchResult[]> = new Map();
   @observable starredIds: Map<string, boolean> = new Map();
   @observable backlinks: Map<string, string[]> = new Map();
+
+  importFileTypes: string[] = [
+    "text/markdown",
+    "text/plain",
+    "text/html",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
 
   constructor(rootStore: RootStore) {
     super(rootStore, Document);
@@ -39,8 +40,8 @@ export default class DocumentsStore extends BaseStore<Document> {
   @computed
   get recentlyViewed(): Document[] {
     return orderBy(
-      compact(this.recentlyViewedIds.map((id) => this.data.get(id))),
-      "updatedAt",
+      filter(this.all, (d) => d.lastViewedAt),
+      "lastViewedAt",
       "desc"
     );
   }
@@ -288,15 +289,7 @@ export default class DocumentsStore extends BaseStore<Document> {
 
   @action
   fetchRecentlyViewed = async (options: ?PaginationParams): Promise<*> => {
-    const data = await this.fetchNamedPage("viewed", options);
-
-    runInAction("DocumentsStore#fetchRecentlyViewed", () => {
-      // $FlowFixMe
-      this.recentlyViewedIds.replace(
-        uniq(this.recentlyViewedIds.concat(map(data, "id")))
-      );
-    });
-    return data;
+    return this.fetchNamedPage("viewed", options);
   };
 
   @action
@@ -320,11 +313,24 @@ export default class DocumentsStore extends BaseStore<Document> {
   };
 
   @action
+  searchTitles = async (query: string, options: PaginationParams = {}) => {
+    const res = await client.get("/documents.search_titles", {
+      query,
+      ...options,
+    });
+    invariant(res && res.data, "Search response should be available");
+
+    // add the documents and associated policies to the store
+    res.data.forEach(this.add);
+    this.addPolicies(res.policies);
+    return res.data;
+  };
+
+  @action
   search = async (
     query: string,
     options: PaginationParams = {}
   ): Promise<SearchResult[]> => {
-    // $FlowFixMe
     const compactedOptions = omitBy(options, (o) => !o);
     const res = await client.get("/documents.search", {
       ...compactedOptions,
@@ -388,7 +394,7 @@ export default class DocumentsStore extends BaseStore<Document> {
   @action
   fetch = async (
     id: string,
-    options?: FetchOptions = {}
+    options: FetchOptions = {}
   ): Promise<?Document> => {
     if (!options.prefetch) this.isFetching = true;
 
@@ -455,6 +461,41 @@ export default class DocumentsStore extends BaseStore<Document> {
     return this.add(res.data);
   };
 
+  @action
+  import = async (
+    file: File,
+    parentDocumentId: string,
+    collectionId: string,
+    options: ImportOptions
+  ) => {
+    const title = file.name.replace(/\.[^/.]+$/, "");
+    const formData = new FormData();
+
+    [
+      { key: "parentDocumentId", value: parentDocumentId },
+      { key: "collectionId", value: collectionId },
+      { key: "title", value: title },
+      { key: "publish", value: options.publish },
+      { key: "file", value: file },
+    ].forEach((info) => {
+      if (typeof info.value === "string" && info.value) {
+        formData.append(info.key, info.value);
+      }
+      if (typeof info.value === "boolean") {
+        formData.append(info.key, info.value.toString());
+      }
+      if (info.value instanceof File) {
+        formData.append(info.key, info.value);
+      }
+    });
+
+    const res = await client.post("/documents.import", formData);
+    invariant(res && res.data, "Data should be available");
+
+    this.addPolicies(res.policies);
+    return this.add(res.data);
+  };
+
   _add = this.add;
 
   @action
@@ -494,10 +535,6 @@ export default class DocumentsStore extends BaseStore<Document> {
   @action
   async delete(document: Document) {
     await super.delete(document);
-
-    runInAction(() => {
-      this.recentlyViewedIds = without(this.recentlyViewedIds, document.id);
-    });
 
     // check to see if we have any shares related to this document already
     // loaded in local state. If so we can go ahead and remove those too.
